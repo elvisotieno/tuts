@@ -24,7 +24,7 @@ const center = {
 export default function App() {
   
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: "AIzaSyAdBa-P-HCfaK-9BKK58Z2wXaLX0vwJ000",
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_KEY,
     libraries,
   });
   const [markers, setMarkers] = React.useState([]);
@@ -65,7 +65,7 @@ export default function App() {
 
       <Locate panTo={panTo} />
       <Search panTo={panTo} />
-
+// this is where we add markers and infoWindow
       <GoogleMap
         id="map"
         mapContainerStyle={mapContainerStyle}
