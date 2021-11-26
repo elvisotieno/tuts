@@ -17,18 +17,7 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36'
 }
 
-
-def rendering_page(url):
-    service = Service(PATH)
-    driver = webdriver.Chrome(service=service)  # run ChromeDriver
-    driver.get(url)  # load the web page from the URL
-    time.sleep(3)  # wait for the web page to load
-    render = driver.page_source  # get the page source HTML
-    driver.quit()  # quit ChromeDriver
-    return render  # return the page source HTML
-
-
-def get_diseases():
+def get_diseases_links(base_url):
 
     raw_data= requests.get(base_url)
     soup = BeautifulSoup(raw_data.content, 'html.parser')
@@ -43,28 +32,42 @@ def get_diseases():
     return diseases_links
 
 
-def get_specific_details():
+def rendering_page(urls):
+    pages=[]
+    for url in urls:
+        service = Service(PATH)
+        driver = webdriver.Chrome(service=service)  # run ChromeDriver
+        driver.get(url)  # load the web page from the URL
+        time.sleep(3)  # wait for the web page to load
+        page_rendered = driver.page_source  # get the page source HTML
+        pages.append(page_rendered)
+        driver.close()
+    driver.quit()  # quit ChromeDriver
+    return pages  # return the page source HTML
+
+
+
+def get_specific_details(html_pages):
     list_of_diseases=[]
-    for link in get_diseases():
-        disease_page = rendering_page(link)
-        disease_page_soup = BeautifulSoup(disease_page, 'lxml')
-        soup_div = disease_page_soup.find('div', class_="report-desc")
+    for page in html_pages:
+        soup = BeautifulSoup(page, 'lxml')
+        soup_div = soup.find('div', class_="report-desc")
         disease_country= soup_div.text.split(',')
         region = disease_country[-1].strip()
         raw_disease = disease_country[0]
         disease = raw_disease.replace('(Inf. with)','').strip()
 
-        status_div = disease_page_soup.find_all('div', class_="reporter-summary-data-val")
+        status_div = soup.find_all('div', class_="reporter-summary-data-val")
         status_section =status_div[-2]
         uncleaned_status = status_section.find('span', class_='txt')
         status = uncleaned_status.text.strip()
 
-        date_div = disease_page_soup.find_all('div', class_="summary-bottom-detail")[1]
+        date_div = soup.find_all('div', class_="summary-bottom-detail")[1]
         confirmed_on = date_div.find('span', class_='detail').text.strip()
 
         causal_agent = date_div.find_all('span')[-1].text.strip()
 
-        treatment_div =disease_page_soup.find_all('div', class_="summary-bottom-detail")[-15]
+        treatment_div = soup.find_all('div', class_="summary-bottom-detail")[-15]
         treatment_measure = treatment_div.find('span', class_="detail").text.strip()
 
         disease_outbreak ={
@@ -78,5 +81,11 @@ def get_specific_details():
         # to ensure we don't take in null values
         if len(disease_outbreak['area'])>1:
             list_of_diseases.append(disease_outbreak)
-    return list_of_diseases
+
+
+    print(list_of_diseases)
+
+urls = get_diseases_links(base_url)
+html_pages= rendering_page(urls)
+get_specific_details(html_pages)
 

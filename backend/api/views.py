@@ -5,7 +5,9 @@ from .serializers import DiseasesSerializers
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-
+from .scraper import get_specific_details
+import aiohttp
+import asyncio
 
 # Create and Retrieve data.
 
@@ -47,5 +49,17 @@ def detail(requst, pk):
     elif requst.method == 'DELETE':
         disease.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+def fetch_post_data():
+    url = 'http://127.0.0.1:8000/api/diseases/'
+    diseases = get_specific_details()
+    for payload in diseases:
+        requests.post(url, data=payload)
+
+async def main():
+    async with aiohttp.ClientSession() as session:
+        task = asyncio.ensure_future()
+
+
 
 
