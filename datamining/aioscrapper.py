@@ -3,19 +3,16 @@ import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-import time
-import aiohttp
-import asyncio
+import schedule
+import time, threading
 
-# Webscrape oie immediate-notifications-in-africa
-# get the url to return all diseases, from which we extract all the links to individual diseases
-# we can now source all the information we want
-# To avoid being blocked we obtain user agent the resembles modern browsers from: 'WhatIsMyBrowser.com'
+
 PATH = 'C:\Program Files (x86)\chromedriver.exe'
 base_url = 'https://rr-africa.oie.int/en/immediate-notifications-in-africa/'
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36'
 }
+scrapped_pages = []
 
 def get_diseases_links(base_url):
 
@@ -33,10 +30,12 @@ def get_diseases_links(base_url):
 
 
 def rendering_page(urls):
-    pages=[]
-    for url in urls:
+    pages = []
+    for url in urls[0:10]:
         service = Service(PATH)
-        driver = webdriver.Chrome(service=service)  # run ChromeDriver
+        options = webdriver.ChromeOptions()
+        options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        driver = webdriver.Chrome(service=service,options=options)  # run ChromeDriver
         driver.get(url)  # load the web page from the URL
         time.sleep(3)  # wait for the web page to load
         page_rendered = driver.page_source  # get the page source HTML
@@ -58,7 +57,7 @@ def get_specific_details(html_pages):
         disease = raw_disease.replace('(Inf. with)','').strip()
 
         status_div = soup.find_all('div', class_="reporter-summary-data-val")
-        status_section =status_div[-2]
+        status_section = status_div[-2]
         uncleaned_status = status_section.find('span', class_='txt')
         status = uncleaned_status.text.strip()
 
@@ -83,9 +82,19 @@ def get_specific_details(html_pages):
             list_of_diseases.append(disease_outbreak)
 
 
-    print(list_of_diseases)
+    return list_of_diseases
 
-urls = get_diseases_links(base_url)
-html_pages= rendering_page(urls)
-get_specific_details(html_pages)
+
+def background_tasks():
+    urls = get_diseases_links(base_url)
+    html_pages = rendering_page(urls)
+    diseases = get_specific_details(html_pages)
+    for payload in diseases:
+        requests.post('http://127.0.0.1:8000/api/diseases/', data=payload)
+
+
+schedule.every().day.at("06:32").do(background_tasks)
+while True:
+    schedule.run_pending()
+    time.sleep(1)
 
