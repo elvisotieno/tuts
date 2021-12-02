@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {GoogleMap,useLoadScript,Marker,InfoWindow,} from "@react-google-maps/api";
 import usePlacesAutocomplete, {getGeocode, getLatLng,} from "use-places-autocomplete";
 import {Combobox,ComboboxInput,ComboboxPopover,ComboboxList,ComboboxOption,} from "@reach/combobox";
 import { formatRelative } from "date-fns";
 import "@reach/combobox/styles.css";
 import mapStyles from "./mapStyles";
+
 
 const libraries = ["places"];
 const mapContainerStyle = {
@@ -29,6 +31,7 @@ export default function App() {
   });
   const [markers, setMarkers] = React.useState([]);
   const [selected, setSelected] = React.useState(null);
+  const [diseases, setDiseases] = useState([])
 
   const onMapClick = React.useCallback((e) => {
     setMarkers((current) => [
@@ -40,6 +43,28 @@ export default function App() {
       },
     ]);
   }, []);
+
+  useEffect(() => {
+    const fetchDiseases = async () => {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/diseases/');
+        console.log(response)
+        setDiseases(response.data);
+      } catch (err) {
+        if (err.response) {
+          // Not in the 200 response range 
+          console.log(err.response.data);
+          console.log(err.response.status);
+          console.log(err.response.headers);
+        } else {
+          console.log(`Error: ${err.message}`);
+        }
+      }
+    }
+
+    fetchDiseases();
+  }, [])
+
 
   const mapRef = React.useRef();
   const onMapLoad = React.useCallback((map) => {
@@ -54,10 +79,11 @@ export default function App() {
   if (loadError) return "Error";
   if (!isLoaded) return "Loading...";
 
+
   return (
     <div>
       <h1>
-        Catlles{" "}
+        Animal Diseases{" "}
         <span role="img" aria-label="tent">
           🐄 
         </span>
@@ -65,7 +91,7 @@ export default function App() {
 
       <Locate panTo={panTo} />
       <Search panTo={panTo} />
-// this is where we add markers and infoWindow
+
       <GoogleMap
         id="map"
         mapContainerStyle={mapContainerStyle}
@@ -82,6 +108,19 @@ export default function App() {
             onClick={() => {
               setSelected(marker);
             }}
+            icon={{
+              url: `/cow.jpg`,
+              origin: new window.google.maps.Point(0, 0),
+              anchor: new window.google.maps.Point(15, 15),
+              scaledSize: new window.google.maps.Size(30, 30),
+            }}
+          />
+        ))}
+
+          {diseases.map((disease) => (
+          <Marker
+            key={disease.id}
+            position={ disease.region}            
             icon={{
               url: `/cow.jpg`,
               origin: new window.google.maps.Point(0, 0),
